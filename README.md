@@ -43,7 +43,9 @@ To resolve a function, provide the pre-calculated DJB2 hash to the resolver:
 
 C++
 uintptr_t ntOpen = GetFunctionAddress(0x3F4DD136); // NtOpenProcess
+
 uintptr_t pNtRead = GetFunctionAddress(0x307C3661); // NtReadVirtualMemory
+
 uintptr_t pNtWrite = GetFunctionAddress(0xFAE162D0);// NtWriteVirtualMemory
 
 <img width="1209" height="214" alt="image" src="https://github.com/user-attachments/assets/30832df8-ce50-4719-985f-595de4bdcddf" />
