@@ -48,7 +48,9 @@ uintptr_t pNtRead = GetFunctionAddress(0x307C3661); // NtReadVirtualMemory
 
 uintptr_t pNtWrite = GetFunctionAddress(0xFAE162D0);// NtWriteVirtualMemory
 
-<img width="1209" height="214" alt="image" src="https://github.com/user-attachments/assets/30832df8-ce50-4719-985f-595de4bdcddf" />
+
+<img width="1084" height="348" alt="image" src="https://github.com/user-attachments/assets/91cc293c-2a11-4226-ae33-5e3f29dfd29d" />
+
 
 📋 Requirements
 Architecture: x64 (Required for gs:[60h] and 64-bit pointers).
