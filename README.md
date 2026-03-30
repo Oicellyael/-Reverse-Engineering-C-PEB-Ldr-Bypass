@@ -1,58 +1,56 @@
-# -Reverse-Engineering-C-PEB-Ldr-Bypass
-C++ implementation for resolving NTDLL function addresses using manual PE header parsing and DJB2 API hashing.
-Native-API-Stealth-Resolver
+# 🛠️ Windows x64 Stealth Internals & Indirect Syscall Engine
+![C++](https://img.shields.io/badge/C++-00599C?style=flat&logo=cplusplus)
+![Windows](https://img.shields.io/badge/Windows-0078D6?style=flat&logo=windows)
 
-🛡️ Overview
-This repository contains a low-level C++ implementation for resolving Windows Native API functions directly from ntdll.dll memory. The project bypasses standard Windows API resolution methods (like GetProcAddress or GetModuleHandle) to demonstrate advanced system internal techniques and anti-analysis patterns.
+### *Advanced Remote Process Exploration via Manual PEB/LDR Traversal*
 
-🚀 Key Features
-Dynamic PEB Resolution: Uses x64 Assembly to access the Process Environment Block (PEB) via the gs register (gs:[60h]).
+---
 
-Manual LDR Traversal: Manually navigates the InLoadOrderModuleList to find the base address of ntdll.dll without library calls.
+## 🛡️ Overview
+This repository contains a sophisticated low-level C++ framework designed for interacting with the Windows kernel-mode interface from user-mode. By bypassing the standard Windows API (Win32) and even direct `ntdll` calls, this engine achieves a high level of stealth and control. It is specifically engineered to demonstrate advanced techniques in **Manual PE Parsing**, **API Hashing**, and **Indirect System Calls**.
 
-EAT Parsing: Implements a manual parser for the Export Address Table (EAT) of the Portable Executable (PE) format.
+## 🚀 Key Features
+* **Indirect Syscall Engine**: Executes system calls by jumping to a legitimate `syscall` instruction within `ntdll.dll` memory. This effectively bypasses EDR/AV call-stack monitoring and instrumentation.
+* **Dynamic SSN Extraction**: Automatically resolves **System Service Numbers (SSNs)** by parsing the Export Address Table (EAT) of `ntdll.dll` and analyzing the function stubs.
+* **Remote PEB & LDR Parsing**: Manually navigates the **Process Environment Block (PEB)** and linked lists (`InLoadOrderModuleList`) of a target process (e.g., `cs2.exe`) to resolve module base addresses without using `EnumProcessModules`.
+* **DJB2 API Hashing**: Replaces sensitive string literals with 32-bit hashes, complicating static analysis and signature-based detection.
+* **Stealth-First Access**: Implements granular access masks (e.g., `0x0438`) for `NtOpenProcess` to minimize the footprint of the process handle.
 
-API Hashing (DJB2): Utilizes a custom hashing algorithm to resolve functions by hash instead of string literals, effectively removing sensitive strings from the binary and complicating static analysis.
+## 🏗️ Architecture & Implementation
 
-Native API Focused: Specifically designed to resolve NtOpenProcess, NtReadVirtualMemory, and NtWriteVirtualMemory.
+### 1. The Assembly Layer (MASM)
+Utilizes custom x64 Assembly to directly access the `gs` register (`gs:[60h]`) to retrieve the local PEB address, ensuring zero reliance on `GetModuleHandle`.
 
-🛠️ Technical Implementation
-The resolver follows a multi-stage process:
+### 2. Manual EAT Resolver
+A custom implementation of a PE header parser that:
+1. Locates the `IMAGE_EXPORT_DIRECTORY`.
+2. Iterates through the `AddressOfNames` array.
+3. Applies a case-insensitive **DJB2 hash** to find the target function.
+4. Maps the index to the function's **Relative Virtual Address (RVA)**.
 
-Assembly Layer: GetMyPeb (ASM) retrieves the PEB address.
+### 3. Syscall Logic
+The engine doesn't just call the resolved address. It:
+* Extracts the **SSN** from the function stub.
+* Finds a valid `syscall; ret` instruction sequence in `ntdll`.
+* Uses a custom ASM trampoline to move the SSN into `rax` and jump to the syscall address.
 
-LDR Layer: Traverses the linked lists in PEB->Ldr to find ntdll.dll.
+## 📁 Project Structure
+* `src/main.cpp`: Core logic, process enumeration, and remote memory parsing.
+* `src/asm.asm`: MASM procedures for PEB access and the syscall trampoline.
+* `include/asm.h`: C++ linkage for assembly routines.
+* `include/nt_structs.h`: Manual definitions of `LDR_DATA_TABLE_ENTRY`, `UNICODE_STRING`, and other internal structures.
 
-Header Parsing: Locates the IMAGE_EXPORT_DIRECTORY from the NT Headers.
+## 💻 Technical Demonstration
+The following output demonstrates the engine resolving system-level information, identifying the target process, and parsing the remote module list to locate `client.dll`:
 
-Hashed Search: Iterates through function names, applying a case-insensitive DJB2 hash, and compares it against target constants.
+<img width="897" height="799" alt="image" src="https://github.com/user-attachments/assets/e0447d0e-31fd-4c9b-b450-245e360a2db6" />
 
-Address Translation: Maps the function name index to its ordinal and finally to its Relative Virtual Address (RVA).
+## 📋 Requirements
+* **Architecture**: x64 (mandatory for `gs` register and 64-bit offsets).
+* **Compiler**: MSVC (Visual Studio) with **MASM** enabled.
+* **SDK**: Windows 10/11 SDK.
 
-📁 Project Structure
-src/main.cpp: Core logic, EAT parsing, and hashing implementation.
+## ⚠️ Research Disclaimer
+This project is developed strictly for **educational and research purposes** within the fields of Windows Internals/External and Cybersecurity. The primary goal is to explore low-level system architecture and undocumented Windows features.
 
-src/asm.asm: x64 Assembly for direct PEB access.
-
-include/asm.h: C++ linkage for assembly procedures.
-
-include/help.h: Custom namespace and global base pointers.
-
-💻 Usage
-To resolve a function, provide the pre-calculated DJB2 hash to the resolver:
-
-C++
-uintptr_t ntOpen = GetFunctionAddress(0x3F4DD136); // NtOpenProcess
-
-uintptr_t pNtRead = GetFunctionAddress(0x307C3661); // NtReadVirtualMemory
-
-uintptr_t pNtWrite = GetFunctionAddress(0xFAE162D0);// NtWriteVirtualMemory
-
-
-<img width="1084" height="348" alt="image" src="https://github.com/user-attachments/assets/91cc293c-2a11-4226-ae33-5e3f29dfd29d" />
-
-
-📋 Requirements
-Architecture: x64 (Required for gs:[60h] and 64-bit pointers).
-
-Compiler: MSVC (Visual Studio) with MASM (Microsoft Macro Assembler) enabled.
+**Хочешь, я помогу тебе составить список из 5-10 каверзных вопросов, которые могут задать по этому коду, и ответов на них?** Чтобы ты на собеседовании чувствовал себя как рыба в воде.
