@@ -6,6 +6,7 @@
 extern "C" {
     extern uintptr_t pebBase;
     void GetMyPeb();
+    DWORD GetMyProcessId();
 }
 
 namespace NTDLL {
@@ -55,7 +56,8 @@ typedef NTSTATUS(NTAPI* f_NtWriteVirtualMemory)(
 
 typedef enum _SYSTEM_INFORMATION_CLASS {
     SystemProcessInformation = 5,
-    SystemHandleInformation = 16
+    SystemHandleInformation = 16,
+	SystemExtendedHandleInformation = 64
 } SYSTEM_INFORMATION_CLASS;
 
 typedef NTSTATUS(NTAPI* f_NtQuerySystemInformation)( 
@@ -100,6 +102,22 @@ typedef struct _LDR_DATA_TABLE_ENTRY {
     UNICODE_STRING BaseDllName;
 } LDR_DATA_TABLE_ENTRY, * PLDR_DATA_TABLE_ENTRY;
 
+typedef struct _SYSTEM_HANDLE_TABLE_ENTRY_INFO {
+    USHORT   UniqueProcessId;
+    USHORT CreatorBackTraceIndex;
+    UCHAR  ObjectTypeIndex;
+    UCHAR  HandleAttributes;
+    USHORT HandleValue;
+    PVOID Object;
+    ULONG GrantedAccess;
+} SYSTEM_HANDLE_TABLE_ENTRY_INFO, * PSYSTEM_HANDLE_TABLE_ENTRY_INFO;;
+
+typedef struct _SYSTEM_HANDLE_INFORMATION {
+    ULONG_PTR NumberOfHandles;
+    ULONG_PTR Reserved;
+    SYSTEM_HANDLE_TABLE_ENTRY_INFO Handles[1];
+} SYSTEM_HANDLE_INFORMATION, * PSYSTEM_HANDLE_INFORMATION;
+
 typedef NTSTATUS(NTAPI* f_NtAllocateVirtualMemory)(
     HANDLE    ProcessHandle,
     PVOID* BaseAddress,
@@ -123,6 +141,23 @@ typedef NTSTATUS(NTAPI* f_NtProtectVirtualMemory)(
     ULONG     NewAccessProtection,
     PULONG    OldAccessProtection
     );
+
+typedef struct _SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX {
+    PVOID Object;               // 8 байт
+    ULONG_PTR UniqueProcessId;  // 8 байт
+    ULONG_PTR HandleValue;      // 8 байт
+    ULONG GrantedAccess;        // 4 байта
+    USHORT CreatorBackTraceIndex; // 2 байта
+    USHORT ObjectTypeIndex;     // 2 байта
+    ULONG HandleAttributes;     // 4 байта
+    ULONG Reserved;             // 4 байта
+} SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX, * PSYSTEM_HANDLE_TABLE_ENTRY_INFO_EX; 
+
+typedef struct _SYSTEM_HANDLE_INFORMATION_EX {
+    ULONG_PTR NumberOfHandles;  // 8 байт
+    ULONG_PTR Reserved;         // 8 байт
+    SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX Handles[1];
+} SYSTEM_HANDLE_INFORMATION_EX, * PSYSTEM_HANDLE_INFORMATION_EX;
 
 // ========== SYSCALL DECLARATIONS =========
 extern "C" NTSTATUS Syscall_NtOpenProcess(
@@ -177,6 +212,40 @@ extern "C" NTSTATUS Syscall_NtQueryInformationProcess(
     PULONG ReturnLength
 );
 
+extern "C" NTSTATUS Syscall_NtAllocateVirtualMemory(
+    HANDLE    ProcessHandle,
+    PVOID*    BaseAddress,
+    ULONG_PTR ZeroBits,
+    PSIZE_T   RegionSize,
+    ULONG     AllocationType,
+    ULONG     Protect
+);
+
+extern "C" NTSTATUS Syscall_NtFreeVirtualMemory(
+    HANDLE    ProcessHandle,
+    PVOID*    BaseAddress,
+    PSIZE_T   RegionSize,
+    ULONG     FreeType
+);
+
+extern "C" NTSTATUS Syscall_NtProtectVirtualMemory(
+    HANDLE    ProcessHandle,
+    PVOID*    BaseAddress,
+    PSIZE_T   NumberOfBytesToProtect,
+    ULONG     NewAccessProtection,
+    PULONG    OldAccessProtection
+);
+
+extern "C" NTSTATUS Syscall_NtDuplicateObject(
+    HANDLE SourceProcessHandle,
+    HANDLE SourceHandle,
+    HANDLE TargetProcessHandle,
+    PHANDLE TargetHandle,
+    ACCESS_MASK DesiredAccess,
+    ULONG HandleAttributes,
+    ULONG Options
+);
+
 // ========== HELPER FUNCTIONS =========
 extern "C" {
     extern DWORD g_ssn;
@@ -190,6 +259,7 @@ extern "C" {
 	extern DWORD g_ssn_allocate;
     extern DWORD g_ssn_free;
 	extern DWORD g_ssn_protect;
+    extern DWORD g_ssn_duplicate;
 }
 
 DWORD MyHasher(const char* word);
